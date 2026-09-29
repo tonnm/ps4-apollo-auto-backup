@@ -1,0 +1,19 @@
+# Local configuration and personal data
+config.json
+*.local.json
+*.log
+backup-state*.json*
+Backups/
+Temp/
+logs/
+*.zip
+*.tmp
+*.lock
+.installed
+.test-artifacts/
+dist/
+# Editor / OS files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini

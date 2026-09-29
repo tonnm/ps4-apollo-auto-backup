@@ -1,0 +1,5 @@
+{
+  "ps4Address": "192.0.2.10",
+  "apolloPort": 8080,
+  "backupPath": "%USERPROFILE%\\Documents\\PS4-Saves"
+}
