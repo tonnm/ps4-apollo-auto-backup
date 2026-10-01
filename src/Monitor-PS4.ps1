@@ -33,10 +33,7 @@ function Write-MonitorLog {
 
     Write-Host $Linha
 
-    Add-Content `
-        -LiteralPath $LogFile `
-        -Value $Linha `
-        -Encoding UTF8
+    Add-AppLogLine -Path $LogFile -Line $Linha
 }
 
 function Test-Apollo {

@@ -17,3 +17,29 @@ dist/
 .idea/
 Thumbs.db
 Desktop.ini
+# .NET build outputs and local GUI preferences
+bin/
+obj/
+gui-settings.json
+.dotnet-home/
+.nuget/
+# Prevent accidental publication of local credentials, IDE state and private material.
+.env
+.env.*
+!.env.example
+.npmrc
+.vs/
+*.suo
+*.user
+*.sln.docstates
+*.pfx
+*.p12
+*.key
+*.private.pem
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+*.dmp
+.release-validation/
+.rv/

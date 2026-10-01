@@ -1,6 +1,6 @@
 # PS4 Apollo Auto Backup v1.0.0
 
-Initial public release.
+Original CLI release; preserved historical baseline. For the first GUI release, see release-v1.1.0.md.
 
 ## Highlights
 
@@ -12,15 +12,14 @@ Initial public release.
 
 ## Before publishing
 
-Replace `[COPYRIGHT HOLDER]` in `LICENSE` with the owner's chosen attribution.
+The owner's chosen attribution is recorded in `LICENSE`.
 Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Run-Tests.ps1`.
 Review [validation results](validation.md), especially tests requiring a real PS4 and Windows task execution.
 Review staged files for local configuration and personal data before committing.
 
-After reviewing and making the release commit, optionally tag it `v1.0.0` and package committed files:
+The v1.0.0 tag already exists and must not be moved or recreated. To archive that historical source:
 
 ```powershell
-git tag v1.0.0
 New-Item -ItemType Directory -Force dist | Out-Null
 git archive --format=zip --prefix=ps4-apollo-auto-backup/ --output=dist/ps4-apollo-auto-backup-v1.0.0.zip v1.0.0
 ```

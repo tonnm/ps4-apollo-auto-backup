@@ -1,0 +1,16 @@
+<Application x:Class="Apollo.Gui.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" ShutdownMode="OnExplicitShutdown">
+  <Application.Resources>
+    <Style TargetType="Window"><Setter Property="FontFamily" Value="Segoe UI"/><Setter Property="FontSize" Value="14"/>
+      <Setter Property="Background" Value="#F3F5F8"/><Setter Property="Foreground" Value="#172538"/></Style>
+    <Style TargetType="Button"><Setter Property="Padding" Value="16,9"/><Setter Property="Margin" Value="0,0,8,8"/>
+      <Setter Property="MinHeight" Value="38"/></Style>
+    <Style TargetType="TextBox"><Setter Property="Padding" Value="8"/><Setter Property="Margin" Value="0,0,0,12"/></Style>
+    <Style TargetType="CheckBox"><Setter Property="Margin" Value="0,6,0,10"/></Style>
+    <Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="White"/>
+      <Setter Property="Padding" Value="22"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Margin" Value="0,0,0,16"/>
+      <Setter Property="BorderBrush" Value="#DDE3EB"/><Setter Property="BorderThickness" Value="1"/></Style>
+    <Style x:Key="Caption" TargetType="TextBlock"><Setter Property="Foreground" Value="#526175"/><Setter Property="FontSize" Value="13"/><Setter Property="Margin" Value="0,0,0,8"/></Style>
+    <Style x:Key="Count" TargetType="TextBlock"><Setter Property="FontSize" Value="28"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+  </Application.Resources>
+</Application>

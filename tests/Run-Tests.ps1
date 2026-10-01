@@ -85,12 +85,22 @@ $rejected = $false
 try { $null = Get-SaveContentHash (Join-Path $work 'traversal.zip') (Join-Path $work 'extract-unsafe') } catch { $rejected = $true }
 Assert ($rejected -and -not (Test-Path -LiteralPath (Join-Path $work 'escape.bin'))) 'ZIP traversal rejected before extraction'
 
-Invoke-Fixture
+Invoke-Fixture -Mode log-reader
 Assert ((Get-ZipCount) -eq 2) 'missing state: NEW saves stored, including bracketed folder name'
 $before = Get-StateHash
 Copy-Item -LiteralPath (Join-Path $work 'equivalent.zip') -Destination (Join-Path $work 'first.zip') -Force
 Invoke-Fixture -Position '00000999'
 Assert ((Get-ZipCount) -eq 2 -and (Get-StateHash) -eq $before) 'UNCHANGED and reordered Apollo positions preserve ZIP count and state bytes'
+Invoke-Fixture -Mode log-reader
+Assert ((Get-ZipCount) -eq 2 -and (Get-StateHash) -eq $before) 'GUI log reader during final UNCHANGED save preserves backups and state'
+$logText = Get-Content -LiteralPath (Join-Path $data 'backup.log') -Raw
+Assert ($logText.TrimEnd().EndsWith('Backup complete. New=0 Changed=0 Unchanged=2 Failures=0')) 'concurrent log reader no longer aborts final save or suppresses summary'
+$sharedLog = Join-Path $work 'monitor-reader.log'
+[IO.File]::WriteAllText($sharedLog, '')
+$reader = [IO.File]::Open($sharedLog, [IO.FileMode]::Open, [IO.FileAccess]::Read, ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+try { Add-AppLogLine $sharedLog 'Monitor reader regression'; Add-AppLogLine $sharedLog 'Second line' }
+finally { $reader.Dispose() }
+Assert ((Get-Content -LiteralPath $sharedLog).Count -eq 2) 'shared logger appends with GUI reader open and closes writer handles'
 New-TestZip (Join-Path $work 'first.zip') 'changed content'
 Invoke-Fixture
 Assert ((Get-ZipCount) -eq 3 -and (Get-StateHash) -ne $before) 'CHANGED creates one version and commits state'

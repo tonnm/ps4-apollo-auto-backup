@@ -1,0 +1,23 @@
+<Window x:Class="Apollo.Gui.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Settings — PS4 Apollo Auto Backup"
+        Width="620" Height="660" MinWidth="470" MinHeight="420" Style="{StaticResource {x:Type Window}}" WindowStartupLocation="CenterOwner">
+  <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
+    <TextBlock x:Name="Heading" Text="Settings" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,8" TextWrapping="Wrap"/>
+    <TextBlock Text="Apollo can be offline. Your PC will wait for it to become available." TextWrapping="Wrap" Margin="0,0,0,18"/>
+    <Label Content="PS4 _IP address" Target="{Binding ElementName=AddressBox}"/>
+    <TextBox x:Name="AddressBox" AutomationProperties.Name="PS4 IP address"/>
+    <Label Content="Apollo _port" Target="{Binding ElementName=PortBox}"/>
+    <TextBox x:Name="PortBox" AutomationProperties.Name="Apollo port"/>
+    <Label Content="Backup _folder" Target="{Binding ElementName=FolderBox}"/>
+    <DockPanel><Button Content="_Browse…" DockPanel.Dock="Right" Click="Browse_Click"/>
+      <TextBox x:Name="FolderBox" AutomationProperties.Name="Backup folder" Margin="0,0,10,12"/></DockPanel>
+    <CheckBox x:Name="StartupBox" Content="Start automatically when I sign in to Windows"/>
+    <CheckBox x:Name="NotificationsBox" Content="Show backup notifications"/>
+    <CheckBox x:Name="MinimizedBox" Content="Start in the notification area"/>
+    <TextBlock Text="Changing the backup folder starts a separate history. Existing backups stay in their original folder." TextWrapping="Wrap" Foreground="#526175" Margin="0,8,0,16"/>
+    <TextBlock x:Name="Feedback" TextWrapping="Wrap" Margin="0,0,0,14" AutomationProperties.LiveSetting="Polite"/>
+    <WrapPanel><Button x:Name="TestButton" Content="_Test connection" Click="Test_Click"/>
+      <Button x:Name="SaveButton" Content="_Save" IsDefault="True" Click="Save_Click"/>
+      <Button Content="Cancel" IsCancel="True"/></WrapPanel>
+  </StackPanel></ScrollViewer>
+</Window>

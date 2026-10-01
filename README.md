@@ -1,195 +1,124 @@
 # PS4 Apollo Auto Backup
 
 Automatic, versioned PS4 save backups from Apollo Save Tool to a Windows PC.
-Version **v1.0.0** preserves the working V4 monitoring and content comparison workflow.
 
-## Features
+**v1.1.0** adds a native Windows interface to the real-world-validated **v1.0.0 backup algorithm**.
+Log writes now support concurrent GUI readers; see the [automatic-backup incident investigation](docs/incident-2026-09-29.md).
+Configure your PS4, leave the application in the notification area, and enable Apollo's web server when you want a backup.
 
-- Automatic backup when the configured Apollo TCP port becomes available.
-- Apollo web server integration: discovers `/zip/<position>/<save>.zip` links.
-- SHA-256 comparison of extracted file content and relative paths.
-- Keeps new and changed saves without retaining redundant ZIPs.
-- Per-user Windows Scheduled Task starts monitoring at logon.
-- Version history and a V4-compatible state database.
-- Configurable PS4 IPv4 address, Apollo port and backup root folder.
-- Exclusive file locks, validated downloads and atomic state replacement.
-- Native Windows PowerShell; no third-party modules, telemetry or updater.
+## Install and start
 
-## Requirements
+1. Download the `v1.1.0-win-x64-self-contained.zip` release and **extract the whole ZIP**.
+2. Double-click `PS4ApolloAutoBackup.exe`.
+3. Confirm the PS4 IP address, Apollo port (usually `8080`) and a dedicated backup folder.
+4. Optionally test the connection, then choose **Start**. Apollo may be offline.
+5. Enable Apollo's web server and keep it available until the backup finishes.
 
-- Windows with Windows PowerShell, built-in .NET ZIP support, `Get-FileHash` and the built-in
-  ScheduledTasks module. Local validation uses **Windows PowerShell 5.1**;
-  other PowerShell/Windows versions have not been verified.
-- A jailbroken PS4 with Apollo Save Tool and its web server exposing save ZIP links.
-  No minimum Apollo version has been established by this project.
-- PC and PS4 on the same reachable local network; the configured TCP port must be accessible.
-- A writable, dedicated local backup folder with enough space for history, a downloaded ZIP
-  and its extracted contents. Use NTFS for atomic state replacement. UNC paths are not supported.
-- The installing Windows user must be allowed to create a Scheduled Task. Administrator
-  rights are not requested; organizational policy may restrict this capability.
+No Git, Visual Studio, manual JSON editing or PowerShell command is needed.
+The app copies its files to `%LOCALAPPDATA%\PS4ApolloAutoBackup\gui\1.1.0`.
+Keep the extracted executable as a launcher, or create a Windows shortcut to the installed executable.
+Closing the window keeps monitoring in the tray. Choose **Exit** to stop completely.
+Settings controls startup at Windows sign-in, notifications and starting minimized.
 
-## Installation
+The smaller `framework-dependent` package requires the **.NET 10 Windows Desktop Runtime x64**.
+The self-contained package includes its runtime. Both require Windows PowerShell 5.1 and Windows Task Scheduler.
+Use a supported Windows x64 release; organizational policy may restrict scripts or startup registration.
+Packages are unsigned. This repository contains build instructions; it does not imply a GitHub release has been published.
 
-1. Download the latest release and extract it.
-2. Open **Windows PowerShell** in the extracted directory.
-3. Run ` .\install.ps1 `.
-4. Enter the PS4 IP address, Apollo port (default `8080`) and backup root folder.
-5. Setup starts the monitor and registers it for future user logons.
+## Daily use
 
-If execution policy blocks the script, review the files, then run this process-scoped command:
+- **Check saves now** runs the existing engine and prevents duplicate manual runs. Engine locks also protect against automatic/manual races.
+- **Open backup folder** opens your configured data root.
+- The last result shows checked/new/changed/unchanged/failed saves and completion time.
+- Recent activity shows the latest three checks with distinct outcome labels. View history opens up to ten summaries in Diagnostics.
+- **Diagnostics** opens logs and folders and copies version, configuration and status information without save contents.
+- Notifications summarize a completed run, not each unchanged save, and can be disabled.
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
-```
+The monitor checks the configured TCP port every ten seconds. Startup or an OFF → ON transition triggers one backup.
+It does not watch game closure or detect changes while Apollo stays online. Close Apollo's server until the monitor
+detects disconnection, then reopen it, or use **Check saves now**. A reachable TCP port is not proof of an Apollo server.
+Progress is indeterminate; the validated comparison and backup-state behavior is unchanged.
 
-This does not change machine or user execution policy. Managed policy can still prevent execution.
-The Scheduled Task also uses a process-scoped bypass to run these unsigned scripts.
+## Upgrade from v1.0.0
 
-Apollo may be offline during installation. A failed TCP check is a warning, not an installation failure.
-Setup re-reads the registered task and verifies its action, enabled state, principal, logon trigger and
-runtime settings. It then starts the task and requires both `Running` state and a **new** startup record
-in `monitor.log` before reporting success. Failure to confirm startup in approximately 15 seconds fails setup.
+Finish any backup, close manually launched monitors, then open the extracted GUI.
+The welcome screen reuses the existing configuration. Keep the same backup folder to retain its history.
+The app safely migrates a recognized v1.0.0 startup task to launch the GUI in the tray.
+It verifies the stored action, enabled preference, principal, trigger and runtime settings before accepting success.
+Unrelated tasks are refused. Failed registration attempts restore the previous task where Windows permits it.
 
-Application files and `config.json` are installed in `%LOCALAPPDATA%\PS4ApolloAutoBackup`.
-The default data root is `PS4-Saves` in the Windows Documents folder. `backupPath` is this
-**root**, with a `Backups` subdirectory beneath it, matching V4.
-`config.example.json` uses a documentation-only IP; setup creates the real configuration.
+Some v1.0.0 tasks require administrator permission to update. If Windows refuses the change,
+the app explains the one-time authorization and opens a UAC prompt for a short-lived startup helper.
+The main app and monitor remain unelevated. Approve with the same Windows account that owns
+the installation; cancellation lets you retry in Settings. Already-correct tasks are only read,
+so normal launches do not repeat the permission request. A denied operation does not trigger another
+equally denied XML rollback. If migration had already stopped the old monitor, finish the update
+from Settings before monitoring resumes. Configuration, logs, state and saves are never reset.
 
-Rerun the extracted installer to change settings or reinstall. Existing settings become prompt defaults.
-It stops only recognized project tasks, locks the old/new data roots, replaces application files and updates
-the task. Fresh installs use `PS4ApolloAutoBackup-<current-user-SID>`; migrated installs keep
-`PS4 Apollo Save Backup`. It keeps backups and state. Changing the data root does not move existing backups or state.
-An interrupted/failed setup must be rerun; setup is not a transaction across all files and Task Scheduler.
+**Owner-validated on real Windows:** normal v1.1.0 migration of `PS4 Apollo Save Backup`
+was denied; running the same build once with sufficient privilege successfully changed its action to
+`%LOCALAPPDATA%\PS4ApolloAutoBackup\gui\1.1.0\PS4ApolloAutoBackup.exe --background`.
+The dedicated UAC-helper flow added after that report still needs its own end-to-end Windows check.
 
-### Migrating from private V4
+Configuration, `backup-state-v4.json`, logs, ZIP history and the old `src` files are preserved.
+Changing the data folder creates a separate history; it does not move or delete old backups.
+Do not run the old installer/uninstaller after GUI migration: they intentionally reject the GUI-owned task.
+Direct migration from private V4/Documents is outside the GUI migration scope; first use the validated v1.0.0 release.
 
-Close manually started old monitors **before** installing. Setup can migrate the root task named
-`PS4 Apollo Save Backup`, including a disabled task, when it belongs to the current user and has one
-recognized PowerShell `-File` action pointing to that user's `Documents\Monitor-PS4.ps1` (including the
-Windows Documents known folder). The file must exist and contain the V4 monitor header, `Test-Apollo`
-function and backup-script invocation. Unknown executables, arguments, owners or scripts cause setup to
-fail without modifying any task. The name alone is never proof of ownership.
+## Data and reliability
 
-The recognized task is updated **under the same name**, explicitly enabled and pointed to
-`%LOCALAPPDATA%\PS4ApolloAutoBackup\src\Monitor-PS4.ps1`. If the earlier installer also created a SID-named
-task, setup removes that duplicate only after verifying its ownership and the replacement configuration.
-Old scripts in Documents are not modified or deleted. Other legacy task names are not migrated automatically.
-Choose the existing V4 `PS4-Saves` root to reuse `backup-state-v4.json` and `Backups`.
-The old scripts do not honor the new locks: never run them concurrently with v1.0.0.
-Make an independent copy of important saves before migration.
+Backups live under `<backup folder>\Backups\<Title ID>\<Save Name>`; state and logs live in the backup root.
+NEW and CHANGED retain a version; UNCHANGED discards the temporary download. Existing versions are never overwritten.
+The V4 algorithm compares SHA-256 signatures of extracted file contents and relative paths.
+ZIP timestamps, compression, entry order and Apollo export position do not affect identity.
+Every ZIP is downloaded for comparison. State updates remain atomic and corrupt state is preserved.
 
-## Usage
+Use a writable dedicated local NTFS folder with room for downloaded and extracted saves. UNC paths are unsupported.
+There is no pruning, cloud synchronization or automatic restore. Identity cannot distinguish accounts with the same
+Title ID and Save Name. Keep independent copies and verify your restore procedure.
 
-Play and save your game, then open/use Apollo and enable its web server so it exposes the save ZIPs.
-Keep Apollo available until `backup.log` reports completion.
+The owner validated v1.1.0 against a real PS4/Apollo on 2026-09-29: automatic checks with the GUI
+open and in tray mode, followed by manual verification, all completed with zero failures.
+See [validation results](docs/validation.md) for the four scenarios and counts.
 
-The monitor checks the TCP port every 10 seconds, with a one-second connect timeout.
-On startup or an unavailable-to-available transition it runs one backup. While the port remains
-available, it does not repeat the backup, even after an error. Close/stop Apollo's server until the
-monitor logs a disconnect, then reopen it to rearm. A restart of the monitor also triggers a run if
-the port is already available. The monitor does **not** detect game closure or watch save changes live.
+v1.0.0 remains the original CLI release. v1.1.0 is the first GUI/tray release, including the
+concurrent-log fix and failed-attempt history. No v1.2.0 functionality is included.
+Engine banners retain v1.0.0 as the validated algorithm baseline; V4 identifies the hash/state format.
+The shared log writer is a v1.1.0 integration fix, not a new hash algorithm or state format.
 
-Only saves exposed in Apollo's page are backed up. HTTP page timeout is 10 seconds;
-each ZIP download timeout is 120 seconds. A reachable port alone does not prove the server is Apollo.
-HTTP redirects are rejected. No data is written to the PS4.
+## Build and test
 
-Run a manual comparison, using the installed configuration:
+Development requires a .NET 10 SDK. The inspected SDK was 10.0.100; the GUI targets `net10.0-windows`.
+[.NET 10 is LTS, supported through November 2028](https://dotnet.microsoft.com/en-us/platform/support/policy).
 
 ```powershell
-& "$env:LOCALAPPDATA\PS4ApolloAutoBackup\src\Backup-PS4.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Publish-Gui.ps1 -SelfContained
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Run-Tests.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Gui-Migration.Tests.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Test-Gui.ps1
 ```
 
-Direct execution from the release folder requires `-ConfigPath` pointing to your configuration.
-Runtime scripts support this parameter; setup and uninstall manage the fixed per-user installation.
+Omit `-SelfContained` for the smaller runtime-dependent build. Output is in `dist`.
+Runtime downloads need NuGet network access; build caches remain inside the repository.
+No external GUI framework or test package is used.
 
-## Backup structure
+## Documentation
 
-```text
-PS4-Saves/                           # configured backupPath
-  Backups/
-    CUSA00001/
-      SAVE_SLOT_1/
-        2026-09-28_21-15-06-123_<guid>.zip
-    OUTROS/                         # filenames without a recognized Title ID
-      <save-name>/
-        <timestamp>_<guid>.zip
-  Temp/                             # per-download GUID ZIP and extraction folder
-  backup-state-v4.json
-  backup.log
-  monitor.log
-  .backup.lock
-  .monitor.lock
-```
+- [GUI architecture, migration, distribution and manual test plan](docs/gui-v1.1.0.md)
+- [Validation results and limits](docs/validation.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Archived v1.0.0 engine/CLI guide](docs/engine-v1.0.0.md)
+- [Changelog](CHANGELOG.md)
 
-The ZIP is kept exactly as downloaded after successful extraction and hashing. Timestamp plus GUID
-prevents collisions; an existing version is never overwritten. There is no retention pruning.
-Lock files remain on disk after exit; their presence alone does not mean the application is running.
+## Removal
 
-## How change detection works
-
-The original V4 algorithm is retained:
-
-1. Identify a save by `Title ID|Save Name` from the ZIP link filename; ignore Apollo's list/export position.
-2. Extract the ZIP to a unique temporary directory.
-3. Enumerate files recursively with PowerShell's normal `Get-ChildItem -File -Recurse` behavior,
-   sort by full path, and compute each file's SHA-256.
-4. Join `relative-path|FILE-HASH` entries with a newline; hash the UTF-8 result with SHA-256.
-5. Compare the resulting uppercase hash with the state entry: `NEW` and `CHANGED` retain a ZIP;
-   `UNCHANGED` discards the temporary download.
-
-ZIP compression, entry ordering and timestamps do not affect the hash. The extraction directory
-and `/zip/<position>/` value do not enter it. **Internal relative paths do enter it**: changing a
-filename or a directory inside the ZIP changes the signature, just as in V4. No internal file types
-are specially excluded; file enumeration does not add `-Force`. Empty archives are rejected.
-URL-encoded save names retain their encoded representation, also matching V4.
-
-The state format keeps the existing `Hash`, `Arquivo` and `Data` fields. A validated ZIP is moved into
-history before state is atomically committed. A crash between these steps can cause one extra version
-on retry, but cannot remove an existing backup. Failed downloads leave previous entries intact.
-A missing state file treats all saves as new. A corrupt state file stops the run and is preserved.
-
-## Logs
-
-`backup.log` and `monitor.log` are in the configured data root, with timestamped messages.
-Backup logs include `NEW`, `CHANGED`, `UNCHANGED`, counts and failures.
-Logs, state and ZIPs may contain personal save names, file paths or account data; do not publish them.
-Logs/history are not automatically rotated. Setup errors appear in the console.
-
-## Troubleshooting
-
-See [troubleshooting](docs/troubleshooting.md), including state recovery and safe manual retries.
-See [local validation](docs/validation.md) for tested behavior and explicit testing limits.
-
-## Uninstall
-
-Run ` .\uninstall.ps1 ` from the extracted release, or:
-
-```powershell
-& "$env:LOCALAPPDATA\PS4ApolloAutoBackup\uninstall.ps1"
-```
-
-It checks both supported task names, stops/removes only verified installed v1 actions, and removes only known application files.
-Close manually started instances first. **All backups, logs, state and temporary data are preserved.**
-There is deliberately no automated backup deletion option. If you want to delete them, inspect and
-remove the data folder yourself after keeping another copy. Unknown files in the installation folder
-are also preserved.
-
-## Limitations
-
-- Requires Apollo's web server and an awake, reachable PC. Monitoring starts at user **logon**,
-  not unattended machine boot; there is no stored password or background service.
-- Every save ZIP must be downloaded to determine whether its contents changed.
-- V4 identity cannot distinguish two users/accounts exporting the same Title ID and Save Name.
-  Use separate data roots/configurations for such collections; no new account-ID logic is introduced.
-- Unsafe Windows folder names are rejected rather than silently renamed. Very long paths may fail
-  under Windows PowerShell/.NET path limits. Use a short data root if necessary.
-- One monitor and one backup per data root are allowed. Legacy V4 instances do not honor these locks.
-- No cloud sync, automatic restore, backup pruning or automatic retry while Apollo remains online.
-- A removed historical ZIP is not recreated if state still reports unchanged content. See the safe
-  state reset instructions to force a fresh copy.
-- Local tests do not establish compatibility with every Apollo release or real console export.
+In Settings, turn off automatic startup, save, and choose **Exit**.
+The disabled project startup entry is harmless; it may be removed in Task Scheduler after verifying its GUI action.
+Delete the installed `gui\1.1.0` directory and extracted release if desired.
+Keep `config.json`, backup state and your backup folder. No automated save deletion is provided.
+There is no MSI, automatic updater or dedicated GUI uninstaller in this release.
 
 ## Disclaimer
 
-This project is not affiliated with Sony or Apollo Save Tool. Keep independent copies of important
-saves and verify your restore procedure. Software is provided without warranty under the [MIT License](LICENSE).
+Not affiliated with Sony or Apollo Save Tool. No Sony artwork is used.
+Software is provided without warranty under the [MIT License](LICENSE).

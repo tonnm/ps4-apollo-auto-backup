@@ -18,6 +18,13 @@ function Invoke-WebRequest {
     $source = 'first.zip'
     if ($Uri -like '*SECOND.zip') { $source = 'second.zip' }
     [IO.File]::Copy((Join-Path $FixtureRoot $source), $OutFile, $false)
+    if ($Mode -eq 'log-reader' -and $source -eq 'second.zip') {
+        # Hold the same access/share flags as History.ReadTail across the final save.
+        $log = Join-Path ((Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json).backupPath) 'backup.log'
+        $script:logReader = [IO.File]::Open($log, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+            ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+    }
 }
-& (Join-Path (Split-Path $PSScriptRoot -Parent) 'src\Backup-PS4.ps1') -ConfigPath $ConfigPath
+try { & (Join-Path (Split-Path $PSScriptRoot -Parent) 'src\Backup-PS4.ps1') -ConfigPath $ConfigPath }
+finally { if ($script:logReader) { $script:logReader.Dispose() } }
 exit $LASTEXITCODE

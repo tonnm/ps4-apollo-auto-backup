@@ -40,10 +40,7 @@ function Write-Log {
 
     Write-Host $Linha
 
-    Add-Content `
-        -LiteralPath $ArquivoLog `
-        -Value $Linha `
-        -Encoding UTF8
+    Add-AppLogLine -Path $ArquivoLog -Line $Linha
 }
 
 # ------------------------------------------------------------

@@ -1,4 +1,19 @@
 ﻿# Shared configuration and safe local file operations. Windows PowerShell 5.1.
+function Add-AppLogLine {
+    param([string]$Path, [string]$Line)
+    # Windows PowerShell 5.1 Add-Content denies concurrent readers. The GUI
+    # tails these logs; explicitly share reads so observation cannot abort a backup.
+    $stream = [IO.File]::Open($Path, [IO.FileMode]::Append, [IO.FileAccess]::Write, [IO.FileShare]::ReadWrite)
+    $writer = $null
+    try {
+        $writer = New-Object IO.StreamWriter($stream, (New-Object Text.UTF8Encoding($true)))
+        $writer.WriteLine($Line)
+    }
+    finally {
+        if ($writer) { $writer.Dispose() } else { $stream.Dispose() }
+    }
+}
+
 function Read-BackupConfig {
     param([string]$Path)
     $config = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop

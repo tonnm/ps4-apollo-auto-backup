@@ -1,5 +1,39 @@
 # Troubleshooting
 
+## GUI v1.1.0
+
+Use **Diagnostics** to open logs and **Settings** to change the address, port or backup folder.
+Closing the window hides it in the notification area; choose **Exit** for a complete stop.
+Exit and Settings refuse to interrupt an active backup. Windows can suppress tray notifications.
+If the GUI says another monitor is running, close manually launched old monitors before retrying;
+do not delete lock files to bypass a running process.
+
+For a startup/migration error, inspect the detail in Diagnostics. The GUI only replaces recognized
+current-user project tasks and verifies the stored result. Permission failures on recognized tasks
+show a one-time authorization explanation followed by Windows UAC. Only the startup helper is elevated;
+do not run the whole app as administrator. Cancelling is safe for your saved data; retry from Settings.
+If the old monitor had already stopped, complete the update to resume monitoring. Use the same Windows
+account that owns this installation; entering a different administrator account is not supported.
+An already-correct migrated task is read without being rewritten on subsequent launches.
+For non-permission failures after a successful change, the adapter attempts rollback. Permission denial
+does not trigger another denied XML write or instructions to manually edit Task Scheduler.
+Managed Windows policy may deny task registration or PowerShell execution. Do not run the old
+installer/uninstaller to repair a GUI task; use GUI Settings after resolving the policy/folder issue.
+The engine copies in the versioned GUI package retain the v1.0.0 backup algorithm with the shared-log fix; the old installed `src` folder
+is retained for recovery, not used as a second background monitor.
+
+The framework-dependent package needs the .NET 10 **Windows Desktop Runtime x64**. Alternatively,
+extract the whole self-contained package. Moving only its executable is insufficient.
+See the [GUI guide](gui-v1.1.0.md) for lifecycle, rollback limits and manual validation.
+
+For an automatic exit 1 without a final summary, see the [2026-09-29 investigation](incident-2026-09-29.md).
+The GUI now records failed automatic attempts separately in Recent activity. A reproduced Windows
+PowerShell log-sharing conflict was fixed without changing the backup algorithm. Exit 1 never means
+"no changes"; a successful all-UNCHANGED check exits 0.
+
+The remaining sections describe the backup engine. CLI setup/uninstall commands apply to v1.0.0,
+not to a GUI-owned startup task.
+
 Start with `monitor.log` and `backup.log` in the data root recorded in
 `%LOCALAPPDATA%\PS4ApolloAutoBackup\config.json`. Never share these files without reviewing
 save names, local paths and other personal data.

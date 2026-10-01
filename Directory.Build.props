@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Apply to every project, including WPF's generated compilation projects.
+         Map the repository root, never post-process compiled assemblies. -->
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
+  </PropertyGroup>
+</Project>

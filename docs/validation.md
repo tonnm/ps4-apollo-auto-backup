@@ -1,4 +1,101 @@
-# Local validation - v1.0.0
+# Local validation
+
+## Clean source release preparation — 2026-09-30
+
+PASS: 165 engine assertions, 78 GUI/service assertions, 53 migration assertions in an isolated source
+copy with no pre-existing build output, production files or optional local V4 reference. Counts vary
+because the engine suite also counts syntax checks of scripts present in the checkout. No tests were
+weakened to match older counts. The same source is used for the self-contained release build.
+
+An initial excessively nested clean copy failed at ZIP publication (a generated path was 262
+characters) and GUI File.Replace. The unchanged tests passed after using a shorter clean source root.
+Use a short workspace and backup root on Windows PowerShell 5.1; long paths are not newly supported.
+These environment failures are retained in private validation logs, not counted as successful runs.
+
+## Real PS4/Apollo validation — v1.1.0 — PASS
+
+Owner-reported results completed on 2026-09-29, separate from automated fixture tests:
+
+| Scenario | Checked | New | Changed | Unchanged | Failures | Outcome |
+| --- | --- | --- | --- | --- | --- | --- |
+| Automatic, GUI open and polling history | 22 | 0 | 4 | 18 | 0 | Successful automatic completion |
+| Automatic, GUI open, no further modifications | 22 | 0 | 0 | 22 | 0 | Successful; changed content recognized without duplication |
+| Automatic, main window closed, tray running; one deliberately modified save | 22 | 0 | 1 | 21 | 0 | Successful; reopening GUI recovered the result |
+| Check saves now, no modifications after tray backup | 22 | 0 | 0 | 22 | 0 | Successful; no duplicate version |
+
+The four initial changes were legitimate changes from normal gameplay during development/testing.
+The GUI stayed open and polling during the first two scenarios; no log-sharing failure occurred.
+The tray/manual sequence confirms the automatic changed-save run committed state correctly.
+No game, account or save identifiers are required to reproduce this validation record.
+
+The PowerShell 5.1 sharing defect was deterministically reproduced. The fix is now validated in real
+GUI-open and tray/background use. The exception from the original failed attempt was not persisted:
+historical causation remains strongly supported, not conclusively recovered.
+This does not certify every UAC/logon, restore or physical failure scenario listed below.
+
+## v1.1.0 — 2026-09-29
+
+Windows PowerShell 5.1, .NET SDK 10.0.100, Windows x64. No production installation,
+task, backup or Git credential was changed. Fixture data lives under `.test-artifacts`.
+
+| Status | Validation | Result |
+| --- | --- | --- |
+| PASS — automated | Complete original regression suite | 186 assertions, including shared-log regression and syntax checks for generated package copies; original assertions retained |
+| PASS — automated | GUI/core services and WPF rendering | 78 assertions including failed automatic history and startup authorization flow |
+| PASS — automated | GUI task migration adapter | 53 assertions; all Scheduler commands mocked |
+| PASS — Windows real environment | PowerShell process creation | New launcher reports GetConsoleWindow() = 0 |
+| PASS — Windows real environment | Process lifetime | Closing the job terminates its owned test child |
+| PASS — Windows real environment | Baseline monitor | Actual unchanged monitor starts hidden with loopback/offline synthetic configuration |
+| PASS — Windows real environment | Helper entry point | Invalid arguments exit before GUI/deployment/startup access; actual UAC is not invoked by automated tests |
+| PASS — automated | WPF layout rendering | Compact main window fits three activity rows without scrolling in simulated 1080p work area at 125%, 150%, 200%; first-run dialog; synthetic content |
+| PASS — build | Framework-dependent and self-contained x64 | .NET 10; runtime 10.0.12 included in self-contained package |
+| PASS — baseline algorithm | Engine | Only shared log appending differs from v1.0.0; hashing/state/downloads/OFF-ON unchanged; tag retained. See incident-2026-09-29.md |
+| PASS — Windows real environment (owner report) | v1.0.0 task → GUI migration with sufficient privilege | Same build failed unelevated, succeeded once elevated; stored action is installed PS4ApolloAutoBackup.exe with --background |
+| NOT TESTED | New dedicated UAC helper, cancellation through actual Windows UAC, real logon/full tray interaction | Requires end-to-end test; automated runs do not modify real tasks or trigger UAC |
+| PASS — owner-reported | GUI + real PS4/Apollo | Four scenarios above; future repeat plan in gui-v1.1.0.md |
+
+Repeat with `tests/Run-Tests.ps1`, `tests/Gui-Migration.Tests.ps1`, and `build/Test-Gui.ps1` in
+separate Windows PowerShell processes. Build with `build/Publish-Gui.ps1` (optionally `-SelfContained`).
+The initial runtime download was blocked by sandbox networking; the authorized network-enabled
+build succeeded. This was an environment restore failure, not an engine test failure.
+
+During the authorization revision, restricted runs of the original suite also failed in the synthetic
+v1.0.0 installer at `File.Replace` (unable to remove the replaced file). The unchanged complete suite
+passed when rerun outside that filesystem restriction, still using only workspace fixtures and mocked
+Scheduler operations. This does not establish the exact external cause of the restricted-file failure;
+no engine or installer change was made to bypass it. Logs are retained under `.test-artifacts`.
+
+GUI tests cover configuration/validation, old field compatibility, bounded result parsing,
+single-instance activation, engine locks, invocation, process creation and deployment preservation.
+Migration regressions use a keyed persisted task collection, independent reads and fault injection:
+disabled old action, no-op registration, no-op enable, incorrect settings, thrown registration,
+rollback/restart, duplicate tasks, unrelated action/user, active backup/monitor and startup preference.
+Unlike a mock that merely returns the requested task, these tests do not equate a successful cmdlet
+return with stored state. They exercise the production adapter's post-registration verification.
+They still cannot prove real Task Scheduler behavior; that limitation is explicit.
+
+Permission regressions cover denied export/stop/register/enable, localized messages/HRESULT,
+no denied XML rollback, helper retry, read-only post-verification, no repeated registration for an
+already-correct task and ownership revalidation. GUI orchestration tests cover ordinary startup without
+UAC, explanation/consent, cancellation (including Windows error 1223), failed helper, wrong Windows
+identity, false-success rejection, request validation/cleanup and configuration preservation.
+
+Real Windows migration was subsequently reported by the owner: `PS4 Apollo Save Backup`, previously
+running `Monitor-PS4.ps1`, was successfully changed with sufficient privilege to
+`%LOCALAPPDATA%\PS4ApolloAutoBackup\gui\1.1.0\PS4ApolloAutoBackup.exe --background`.
+The same build without elevation returned Access denied and a failed-rollback message. The helper and
+rollback changes address that confirmed permission boundary. Do not label the newly added UAC flow
+as real-Windows validated until the manual authorization tests are performed.
+
+The legacy Hidden comparison returned exit 0 and console handle 0 in this hosted environment too.
+An initial assertion expecting a nonzero old-style handle failed; it was corrected to a diagnostic
+comparison because host policy controls allocation. The new no-console assertion remains mandatory.
+The user's visible-window symptom was not reproduced here, and its historical process origin is unknown.
+
+Owner-reported PS4 validation applies to **v1.0.0 only**: 21 NEW, 21 UNCHANGED,
+then 5 CHANGED + 16 UNCHANGED following the game-save modification, all with zero failures.
+
+## Archived v1.0.0 validation
 
 Validated on 2026-09-28 using Windows PowerShell 5.1 (Desktop) and built-in .NET libraries.
 Run the repeatable tests from the extracted repository:

@@ -1,659 +1,726 @@
-# AGENTS.md — PS4 Apollo Auto Backup
+# PS4 Apollo Auto Backup — GUI v1.1.0
 
-## 1. Objetivo
+## Context
 
-Este repositório contém um sistema de backup automático de saves de um PS4 com jailbreak utilizando Apollo Save Tool e um PC Windows.
+Version v1.0.0 has been validated against a real Windows + PS4 + Apollo Save Tool environment.
 
-A implementação atual (V4) já foi testada em uso real e funciona.
+Real-world validation successfully covered:
 
-Sua tarefa é transformar o projeto atual em um projeto open source genérico, seguro, documentado e fácil de instalar, preservando o comportamento funcional da V4.
+- Windows Scheduled Task migration
+- monitor startup
+- Apollo OFF → ON detection
+- 21 saves discovered
+- initial backup: 21 NEW, 0 failures
+- second backup: 21 UNCHANGED, 0 failures
+- real game-save save modification: 5 CHANGED, 16 UNCHANGED, 0 failures
+- monitor OFF/ON rearming
 
-O resultado final deve estar pronto para ser publicado diretamente no GitHub.
+The v1.0.0 Git tag is the known-good engine baseline.
 
-Não reescreva partes funcionais apenas por preferência estética.
-
----
-
-## 2. Antes de alterar qualquer arquivo
-
-Primeiro:
-
-1. Leia todos os arquivos existentes no projeto.
-2. Entenda completamente o funcionamento atual.
-3. Identifique:
-   - script de monitoramento;
-   - script de backup;
-   - arquivos de estado;
-   - logs;
-   - integração com Apollo;
-   - configuração do IP/porta;
-   - Scheduled Task;
-   - detecção de saves;
-   - comparação por hash;
-   - estrutura dos backups.
-4. Identifique valores específicos do ambiente do desenvolvedor.
-5. Identifique dados pessoais ou sensíveis que não devem ser publicados.
-
-Somente depois disso comece a modificar o projeto.
-
-A versão atual funcional deve ser tratada como referência de comportamento.
+The goal of v1.1.0 is to add a friendly Windows graphical interface without destabilizing the validated backup engine.
 
 ---
 
-# 3. Comportamento que deve ser preservado
+# 1. Primary rule: protect the engine
 
-O fluxo atual é aproximadamente:
+Treat these files and their behavior as validated:
+
+- `src/Backup-PS4.ps1`
+- `src/Monitor-PS4.ps1`
+- V4 SHA-256 comparison algorithm
+- NEW / CHANGED / UNCHANGED semantics
+- Apollo communication
+- backup state persistence
+- backup version creation
+- OFF/ON monitor behavior
+
+Do NOT rewrite the backup algorithm.
+
+Do NOT port the backup engine to C# in v1.1.0.
+
+Do NOT change save identity semantics.
+
+Do NOT optimize save downloading in this release.
+
+If integration requires a change to the PowerShell engine, keep it minimal and explain why it is necessary.
+
+Existing regression tests must continue to pass.
+
+---
+
+# 2. Goal
+
+Turn PS4 Apollo Auto Backup from a PowerShell-oriented tool into a user-friendly Windows application.
+
+Normal users should not need to understand:
+
+- PowerShell
+- Scheduled Tasks
+- JSON
+- command-line arguments
+- exit codes
+- SHA-256
+
+The application should feel like a small native Windows utility.
+
+---
+
+# 3. Technology
+
+Preferred GUI:
+
+C# + WPF.
+
+Use a current supported .NET version available in the development environment.
+
+Before choosing the target framework:
+
+1. inspect installed .NET SDKs;
+2. select an appropriate supported target;
+3. document the requirement.
+
+Avoid:
+
+- Electron
+- Node.js runtime
+- Python runtime
+- browser-based UI
+- unnecessary third-party frameworks.
+
+Prefer built-in .NET/WPF functionality.
+
+The final release should preferably support self-contained or otherwise simple distribution if practical.
+
+Do not introduce a large runtime requirement without documenting the tradeoff.
+
+---
+
+# 4. Architecture
+
+Keep responsibilities separated.
+
+Conceptual architecture:
+
+GUI application
+|
++-- configuration
++-- status
++-- tray icon
++-- notifications
++-- backup history
++-- diagnostics
+|
++---- controls validated PowerShell engine
+|
++-- Monitor-PS4.ps1
+|
++-- Backup-PS4.ps1
+|
++-- Apollo Save Tool
+
+The GUI is the presentation/control layer.
+
+PowerShell remains the backup engine for v1.1.0.
+
+---
+
+# 5. Main window
+
+Create a clean, simple main window.
+
+Conceptual layout:
+
+PS4 Apollo Auto Backup
+
+[status indicator] Monitoring
+Waiting for Apollo
 
 PS4
-→ Apollo Save Tool disponível na rede
-→ Monitor detecta Apollo
-→ rotina de backup é disparada
-→ saves são enumerados
-→ saves são comparados com o estado anterior
-→ somente saves novos ou modificados precisam gerar novo backup
-→ histórico/estado é atualizado
-→ logs são gravados.
+Address: 192.168.x.x
+Apollo port: 8080
 
-Preserve esse comportamento.
+Last backup
+Date/time
 
-Não introduza dependências desnecessárias.
+21 saves checked
+5 changed
+16 unchanged
+0 failures
 
-O projeto deve continuar funcionando com PowerShell nativo do Windows sempre que possível.
+[ Backup now ]
+[ Open backup folder ]
 
----
+Recent activity
 
-# 4. Comparação dos saves
+22:32 Backup completed — 5 changed
+22:13 Backup completed — no changes
 
-A V4 possui lógica já validada para determinar se um save realmente mudou.
+[ Settings ]
 
-Preserve essa lógica.
+Do not copy this layout mechanically if a better native WPF layout is appropriate.
 
-Não considere um arquivo diferente apenas porque:
-
-- o ZIP foi recriado;
-- timestamps mudaram;
-- metadados do arquivo mudaram;
-- caminhos temporários do Apollo mudaram;
-- identificadores temporários de exportação mudaram.
-
-A comparação deve continuar baseada no conteúdo relevante do save, utilizando SHA-256 conforme a implementação atual.
-
-Se a implementação existente possuir alguma particularidade adicional, preserve-a e documente-a.
-
-Objetivo:
-
-NEW
-→ criar backup.
-
-CHANGED
-→ criar backup.
-
-UNCHANGED
-→ não criar backup redundante.
+Prioritize clarity.
 
 ---
 
-# 5. Remover informações específicas do desenvolvedor
+# 6. Status states
 
-Nenhuma informação específica da máquina original deve permanecer hardcoded.
+The GUI must clearly represent at least:
 
-Procure especialmente por:
+Monitoring
 
-- IP do PS4;
-- 192.168.x.x;
-- usuário do Windows;
-- caminhos como C:\Users\...;
-- Account ID;
-- PSN ID;
-- nomes pessoais;
-- caminhos absolutos;
-- endereço MAC;
-- credenciais;
-- tokens;
-- informações de rede local.
+Waiting for Apollo
 
-Substitua tudo por configuração genérica.
+Apollo detected
 
-Antes de concluir, faça uma busca global no repositório procurando possíveis informações pessoais.
+Backup in progress
+
+Backup completed
+
+Backup completed with failures
+
+Monitor stopped
+
+Configuration error
+
+PS4/Apollo unreachable
+
+Use human-readable messages.
+
+Do not expose raw exit codes as the primary user-facing status.
+
+Diagnostics may show technical details.
 
 ---
 
-# 6. Configuração
+# 7. Backup progress
 
-Crie um mecanismo simples de configuração.
+When a backup is running, show useful progress if this can be implemented without invasive changes to the validated engine.
 
-Preferencialmente:
+Example:
+
+Backing up saves...
+
+16 / 21
+
+If reliable progress requires major changes to Backup-PS4.ps1, do NOT modify the engine just for progress.
+
+In that case show:
+
+Backup in progress...
+
+and derive the final result from the existing logs/state.
+
+Engine stability is more important than a progress bar.
+
+---
+
+# 8. Backup results
+
+After a backup, display:
+
+total saves checked
+new
+changed
+unchanged
+failures
+time completed
+
+Example:
+
+Backup completed
+
+21 saves checked
+0 new
+5 changed
+16 unchanged
+0 failures
+
+The GUI should obtain these values from a stable integration mechanism.
+
+Prefer parsing a structured result/state if one already exists.
+
+Avoid fragile parsing of console formatting when possible.
+
+If structured status output requires a very small additive engine change, propose and document it before changing validated behavior.
+
+---
+
+# 9. Backup Now
+
+Provide:
+
+Backup now
+
+This should invoke the existing backup engine manually.
+
+Prevent concurrent backups.
+
+While a backup is already running:
+
+- disable the button;
+- show that backup is in progress.
+
+Do not permit two Backup-PS4 processes to race.
+
+Existing engine locking remains the final safety mechanism.
+
+---
+
+# 10. Open Backup Folder
+
+Provide:
+
+Open backup folder
+
+Open the configured backup root using Windows Explorer.
+
+Handle missing directories gracefully.
+
+---
+
+# 11. Settings
+
+Create a Settings screen/dialog.
+
+Fields:
+
+PS4 IP address
+Apollo port
+Backup folder
+Start automatically with Windows
+Show notifications
+
+Optional:
+
+Start minimized
+Minimize to tray
+
+Validate values before saving.
+
+Configuration should remain compatible with the existing engine.
+
+Do not store secrets because none are required.
+
+---
+
+# 12. Connection test
+
+Settings should provide:
+
+Test connection
+
+Possible results:
+
+Apollo detected
+Connection successful
+
+or:
+
+Apollo not detected
+
+The second result should not be treated as a fatal configuration error because the PS4 or Apollo may simply be offline.
+
+---
+
+# 13. First-run experience
+
+A new user should not have to execute install.ps1 manually if the GUI can reasonably handle initial configuration.
+
+On first launch:
+
+Welcome to PS4 Apollo Auto Backup
+
+PS4 IP address
+Apollo port
+Backup folder
+
+[ Test connection ]
+
+[ Start ]
+
+If Apollo is offline:
+
+Apollo could not be reached.
+You can continue setup and the application will monitor it later.
+
+Do not block setup solely because Apollo is unavailable.
+
+---
+
+# 14. System tray
+
+The application should support the Windows notification area/system tray.
+
+Normal background operation should not require an open PowerShell console.
+
+Tray behavior:
+
+PS4 Apollo Auto Backup
+Monitoring
+
+Menu:
+
+Open
+Backup now
+Open backup folder
+Settings
+Exit
+
+Closing the main window should preferably minimize to tray when monitoring is enabled.
+
+Provide a clear way to fully exit.
+
+---
+
+# 15. No visible monitor console
+
+Normal v1.1.0 operation must not leave the Monitor-PS4 PowerShell console visible.
+
+This is a specific issue observed during real v1.0.0 validation.
+
+The existing Scheduled Task used `-WindowStyle Hidden`, but a console window was still visible.
+
+Investigate the actual cause.
+
+Fix it without destabilizing monitor behavior.
+
+Do not merely move the window off-screen.
+
+The normal user experience must be console-free.
+
+A diagnostics/developer mode may intentionally expose logs or a console if useful.
+
+---
+
+# 16. Notifications
+
+Use Windows notifications where practical.
+
+Examples:
+
+Backup completed
+5 saves changed. 0 failures.
+
+Backup warning
+1 save could not be backed up.
+
+Avoid notifications for every UNCHANGED save.
+
+Do not spam the user.
+
+Allow notifications to be disabled.
+
+---
+
+# 17. Recent activity
+
+Display a small recent history.
+
+Examples:
+
+22:32 Backup completed — 5 changed
+22:13 Backup completed — no changes
+22:09 Initial backup — 21 saves
+
+Do not scan unlimited log history on every UI refresh.
+
+Use a reasonable bounded amount of data.
+
+---
+
+# 18. Diagnostics
+
+Provide a Diagnostics section.
+
+Useful actions:
+
+Open monitor log
+Open backup log
+Open installation folder
+Open backup folder
+Copy diagnostic information
+
+Display:
+
+application version
+engine version
+configured PS4 address
+Apollo port
+monitor state
+last backup time
+last backup result
+
+Do not include private save contents in copied diagnostics.
+
+---
+
+# 19. Tray/application lifecycle
+
+Define lifecycle carefully.
+
+There should be one authoritative background monitoring instance.
+
+Avoid:
+
+GUI monitor
+
+- Scheduled Task monitor
+- manual monitor
+
+running simultaneously.
+
+Determine a clean ownership model.
+
+Preferred direction:
+
+The GUI/tray application owns user-facing lifecycle.
+
+The existing monitor engine may run hidden as a child/background process or through a clearly coordinated mechanism.
+
+Existing locking protections must remain.
+
+Document the final lifecycle architecture.
+
+---
+
+# 20. Windows startup
+
+Users should be able to enable:
+
+Start automatically with Windows
+
+The GUI should manage this safely.
+
+If the existing Scheduled Task remains the best mechanism, adapt it to launch the GUI/tray application rather than presenting a PowerShell console.
+
+Migration from v1.0.0 must be supported.
+
+Existing users must not need to manually delete their v1.0.0 task.
+
+---
+
+# 21. Migration from v1.0.0
+
+This is mandatory.
+
+Existing v1.0.0 users may already have:
+
+%LOCALAPPDATA%\PS4ApolloAutoBackup
 
 config.json
 
-Exemplo conceitual:
+backup-state-v4.json
 
-{
-"ps4Address": "192.168.1.100",
-"apolloPort": 8080,
-"backupPath": "%USERPROFILE%\\Documents\\PS4-Saves\\Backups"
-}
+existing backups
 
-Adapte os nomes ao funcionamento real encontrado no projeto.
+Scheduled Task:
+PS4 Apollo Save Backup
 
-Não invente opções que não tenham utilidade.
+v1.1.0 must preserve:
 
-O instalador deve criar a configuração.
+configuration
+backup state
+backup history
+all existing backups
 
-O usuário não deve precisar editar os scripts manualmente.
+Never reset the user's save history merely because the GUI was installed.
 
----
-
-# 7. Instalador
-
-Criar:
-
-install.ps1
-
-O instalador deve ser amigável para usuários sem conhecimento avançado de PowerShell.
-
-Fluxo esperado:
-
-========================================
-PS4 Apollo Auto Backup - Setup
-========================================
-
-PS4 IP address:
-
->
-
-Apollo port [8080]:
-
->
-
-Backup location [default]:
-
->
-
-Depois:
-
-- validar os dados;
-- criar diretórios necessários;
-- gerar config.json;
-- instalar/copiar os scripts para localização apropriada;
-- criar a Scheduled Task necessária;
-- configurar inicialização automática do monitor;
-- testar os componentes que puderem ser testados;
-- informar claramente o resultado.
-
-Exemplo de saída:
-
-[OK] Configuration created
-[OK] Backup directory created
-[OK] Scheduled Task created
-[OK] Installation completed
-
-Se Apollo não estiver aberto naquele momento, isso NÃO deve necessariamente impedir a instalação.
-
-Nesse caso:
-
-[WARN] Apollo could not be reached.
-Installation completed, but connection could not be tested.
-
-Não exija que o PS4 esteja ligado durante a instalação.
+Migration must be tested.
 
 ---
 
-# 8. Desinstalador
+# 22. Installation/distribution
 
-Criar:
+Investigate the simplest safe distribution.
 
-uninstall.ps1
+Preferred user experience:
 
-Ele deve:
+Download release
+→ run setup/application
+→ configure PS4
+→ done
 
-- parar processos/tarefas pertencentes ao projeto quando necessário;
-- remover a Scheduled Task criada pelo projeto;
-- remover arquivos instalados pelo projeto;
-- perguntar antes de apagar backups;
-- por padrão PRESERVAR os saves/backups.
+Users should not need Git.
 
-Nunca delete backups automaticamente.
+Users should not need Visual Studio.
 
----
+Users should not need to manually create Scheduled Tasks.
 
-# 9. Estrutura do repositório
+Users should not need to manually edit JSON.
 
-Organize aproximadamente como:
+If producing a single executable is practical, evaluate it.
 
-ps4-apollo-auto-backup/
-│
-├── README.md
-├── LICENSE
-├── CHANGELOG.md
-├── AGENTS.md
-├── .gitignore
-├── install.ps1
-├── uninstall.ps1
-│
-├── src/
-│ ├── Backup-PS4.ps1
-│ └── Monitor-PS4.ps1
-│
-└── docs/
-└── troubleshooting.md
-
-Adapte se a estrutura atual justificar alguma diferença.
-
-Não mova arquivos apenas para seguir essa estrutura caso isso complique desnecessariamente o funcionamento.
+Do not sacrifice maintainability merely to achieve one file.
 
 ---
 
-# 10. Dados gerados em runtime
+# 23. Visual design
 
-Arquivos gerados durante execução não devem ser commitados.
+Use a restrained Windows-native visual style.
 
-Adicionar ao .gitignore conforme necessário:
+Avoid:
 
-- logs;
-- arquivos de estado;
-- backups;
-- temporários;
-- config.json contendo configuração local;
-- arquivos baixados/exportados;
-- artefatos de teste.
+- gamer neon overload;
+- giant gradients;
+- excessive animations;
+- PlayStation/Sony copyrighted artwork;
+- unofficial use of Sony logos.
 
-Se necessário, forneça:
+A simple controller/save/cloud-style generic icon may be used if legally appropriate and original.
 
-config.example.json
+Support normal Windows DPI scaling.
 
-Nunca publique o config.json real do desenvolvedor.
+The application must remain usable at 125%, 150% and 200% scaling.
 
 ---
 
-# 11. Logs
+# 24. Accessibility
 
-Padronize as mensagens sem destruir informações úteis existentes.
+Use readable font sizes.
 
-Formato recomendado:
+Provide clear labels.
 
-[2026-09-28 21:15:03] [INFO] Apollo detected.
-[2026-09-28 21:15:04] [INFO] 19 saves found.
-[2026-09-28 21:15:05] [UNCHANGED] CUSA08519
-[2026-09-28 21:15:06] [CHANGED] CUSA00001
-[2026-09-28 21:15:07] [NEW] CUSA00002
-[2026-09-28 21:15:09] [INFO] Backup completed.
+Do not communicate status using color alone.
 
-Erros devem possuir mensagens úteis para troubleshooting.
+Controls should work with keyboard navigation.
 
-Não exponha informações sensíveis desnecessariamente nos logs.
+Use appropriate accessible names/tooltips where necessary.
 
 ---
 
-# 12. Robustez
+# 25. Error handling
 
-Revise especialmente:
+Translate technical failures into useful messages.
 
-- PS4 desligado;
-- Apollo fechado;
-- timeout;
-- mudança de IP;
-- pendrive/armazenamento indisponível, se aplicável;
-- arquivo de estado inexistente;
-- arquivo de estado corrompido;
-- diretório de backup inexistente;
-- execução simultânea de duas instâncias;
-- interrupção durante backup;
-- caracteres especiais em nomes;
-- permissões do Windows;
-- Scheduled Task já existente;
-- reinstalação sobre instalação existente.
+Instead of:
 
-Uma falha temporária de conexão com o PS4 não deve destruir o estado existente.
+Exit code 20
 
-Evite condições que possam sobrescrever um backup válido com dados incompletos.
+show:
+
+Backup failed while downloading one or more saves.
+
+Then provide:
+
+View details
+
+Diagnostics can contain the technical exit code.
 
 ---
 
-# 13. Segurança dos backups
+# 26. Existing tests
 
-Backup de save é dado importante.
+All existing v1.0.0 tests must continue passing.
 
-Prefira:
+Currently the suite contains 158 assertions.
 
-write temp
-→ validar
-→ mover/renomear para destino final.
+Do not delete tests merely because the GUI architecture changes.
 
-Quando aplicável, evite escrever diretamente sobre um backup válido.
+Add tests for GUI-supporting services where practical, especially:
 
-Nunca delete o último backup válido devido a falha de rede ou erro de processamento.
+configuration
+migration
+status parsing
+single-instance behavior
+startup registration
+backup invocation
+history/result parsing
 
----
-
-# 14. README
-
-Criar um README.md completo em inglês.
-
-Pode adicionar uma seção curta em português, mas inglês deve ser a documentação principal.
-
-O README deve conter:
-
-# PS4 Apollo Auto Backup
-
-Descrição curta.
-
-## Features
-
-Explicar:
-
-- automatic save backup;
-- Apollo Save Tool integration;
-- change detection;
-- SHA-256 comparison;
-- avoids redundant backups;
-- Windows startup monitoring;
-- backup history;
-- configurable PS4 address;
-- configurable backup directory.
-
-Não alegue funcionalidades que o código não possui.
-
-## Requirements
-
-Documentar exatamente os requisitos encontrados no projeto, incluindo:
-
-- Windows;
-- PowerShell;
-- PS4 jailbreak;
-- Apollo Save Tool;
-- PS4 e PC na mesma rede, caso seja requisito.
-
-Não invente versões mínimas sem evidência.
-
-## Installation
-
-Objetivo:
-
-1. Download latest release.
-2. Extract.
-3. Run install.ps1.
-4. Enter PS4 IP.
-5. Finish.
-
-Inclua instrução para eventual ExecutionPolicy somente se realmente necessária.
-
-## Usage
-
-Explique exatamente o fluxo real.
-
-Por exemplo:
-
-Play
-→ save game
-→ close/leave game
-→ open/use Apollo conforme exigido pela implementação
-→ monitor detects availability
-→ backup runs.
-
-IMPORTANTE:
-
-Não diga que o sistema detecta automaticamente o fechamento do jogo se isso não for verdade.
-
-Documente exatamente o gatilho que a implementação realmente utiliza.
-
-## Backup structure
-
-Mostre exemplo real.
-
-## How change detection works
-
-Explique resumidamente a estratégia de SHA-256.
-
-## Logs
-
-Informe localização.
-
-## Troubleshooting
-
-Link para docs/troubleshooting.md.
-
-## Uninstall
-
-Explique uninstall.ps1.
-
-## Limitations
-
-Seja transparente.
-
-Explique, por exemplo, qualquer necessidade de abrir Apollo ou executar alguma ação no console.
-
-## Disclaimer
-
-Deixe claro que:
-
-- projeto não é afiliado à Sony;
-- projeto não é afiliado ao Apollo Save Tool;
-- usuário deve manter backups importantes;
-- software é fornecido sem garantia.
-
-Não use logos ou assets proprietários da Sony.
+UI rendering itself does not need excessive automated testing.
 
 ---
 
-# 15. Troubleshooting
+# 27. Real-world validation
 
-Criar:
+Do not claim real PS4 validation for new GUI functionality until manually tested.
 
-docs/troubleshooting.md
+Clearly separate:
 
-Cobrir pelo menos:
-
-- Apollo not detected;
-- PS4 IP changed;
-- firewall;
-- port unreachable;
-- Scheduled Task not running;
-- monitor running but backup does not start;
-- backup directory unavailable;
-- corrupted state file;
-- how to force a backup safely;
-- where logs are stored;
-- how to completely reset the application's state WITHOUT deleting backups.
-
-Baseie as soluções no funcionamento real do código.
+PASS — automated
+PASS — Windows real environment
+NOT TESTED — requires PS4/Apollo
 
 ---
 
-# 16. LICENSE
+# 28. Versioning
 
-Adicionar uma licença open source apropriada.
+Target:
 
-Preferência: MIT License.
+v1.1.0
 
-Não atribua copyright a terceiros.
+Do NOT move or recreate the existing v1.0.0 Git tag.
 
-Utilize o nome do autor somente se ele já estiver claramente definido no projeto; caso contrário, deixe um marcador fácil de substituir antes da publicação.
-
----
-
-# 17. CHANGELOG
-
-Criar:
+Update:
 
 CHANGELOG.md
+README.md
+documentation
 
-Inicialmente:
-
-## [1.0.0]
-
-### Added
-
-- Apollo monitoring
-- automatic backup workflow
-- SHA-256 save change detection
-- backup history/state
-- installer
-- uninstaller
-- Windows Scheduled Task integration
-- documentation
-
-Ajuste a lista para refletir somente funcionalidades realmente existentes.
+Do not create the v1.1.0 Git tag automatically.
 
 ---
 
-# 18. GitHub
+# 29. Git safety
 
-Deixe o projeto preparado para:
+Work on the current feature branch.
 
-git init
-git add .
-git commit -m "Initial public release"
-git branch -M main
+Do not:
 
-Não execute push.
+push
+force push
+rewrite v1.0.0 history
+delete tags
+modify Git credentials
 
-Não configure credenciais.
-
-Não crie remotamente o repositório sem autorização.
-
----
-
-# 19. Release
-
-Prepare o projeto como versão:
-
-v1.0.0
-
-Se fizer sentido, crie documentação de release contendo:
-
-PS4 Apollo Auto Backup v1.0.0
-
-Initial public release.
-
-Highlights:
-
-- ...
-- ...
-- ...
-
-Não inclua arquivos runtime no pacote.
+The existing v1.0.0 commit/tag is the stable baseline.
 
 ---
 
-# 20. Compatibilidade
+# 30. Final report
 
-Preserve compatibilidade com o ambiente PowerShell utilizado atualmente.
+At completion provide:
 
-Evite adicionar:
+## Architecture
 
-- Node.js;
-- Python;
-- .NET SDK;
-- executáveis externos;
-- módulos PowerShell de terceiros;
-
-a menos que seja absolutamente necessário.
-
-O objetivo é:
-
-Windows + PowerShell + Apollo
-
-com o mínimo possível de instalação adicional.
-
----
-
-# 21. Não fazer
-
-Não:
-
-- reescrever a V4 inteira sem necessidade;
-- mudar algoritmo funcional apenas por estilo;
-- remover tratamento de erros existente sem equivalente melhor;
-- adicionar telemetria;
-- adicionar analytics;
-- enviar qualquer dado pela internet;
-- adicionar atualização automática;
-- adicionar dependências obscuras;
-- armazenar credenciais;
-- publicar dados pessoais;
-- apagar backups;
-- fazer push automaticamente.
-
----
-
-# 22. Validação obrigatória
-
-Antes de considerar o trabalho concluído:
-
-1. Faça análise sintática de todos os .ps1.
-2. Procure referências quebradas após reorganização.
-3. Valide config.example.json.
-4. Verifique .gitignore.
-5. Procure IPs privados hardcoded.
-6. Procure caminhos C:\Users hardcoded.
-7. Procure nomes/IDs pessoais.
-8. Verifique criação da Scheduled Task.
-9. Verifique comportamento de reinstalação.
-10. Verifique uninstall.
-11. Verifique que uninstall preserva backups por padrão.
-12. Verifique que erros de rede não destroem o estado.
-13. Verifique que duas execuções simultâneas não corrompem backup/estado.
-14. Confirme que README descreve o comportamento REAL.
-
-Se algum teste depender de um PS4/Apollo real e não puder ser executado, NÃO simule sucesso.
-
-Marque explicitamente:
-
-NOT TESTED — requires real PS4/Apollo environment.
-
----
-
-# 23. Relatório final
-
-Ao terminar, não responda apenas "pronto".
-
-Forneça:
+Explain how GUI, monitor and backup engine interact.
 
 ## Changes made
 
-Lista resumida.
+Files added/modified.
 
-## Repository structure
+## Engine changes
 
-Árvore final.
+Explicitly state whether Backup-PS4.ps1 or Monitor-PS4.ps1 changed and why.
 
-## Tests performed
+## Tests
 
-Para cada teste:
+PASS / FAIL / NOT TESTED.
 
-PASS
-FAIL
-NOT TESTED
+## Migration
 
-## Privacy check
+Explain v1.0.0 → v1.1.0 behavior.
 
-Informe o que foi pesquisado para evitar vazamento de dados pessoais.
+## Distribution
+
+Explain how a normal user installs/runs the application.
 
 ## Known limitations
 
-Limitações reais restantes.
+List remaining limitations.
 
-## Before publishing
+## Manual test plan
 
-Liste qualquer coisa que o proprietário ainda precise preencher.
+Provide exact steps for testing against a real PS4/Apollo environment.
 
-## Suggested Git commands
-
-Forneça os comandos necessários para criar o commit inicial, mas NÃO faça push.
+Do not create a Git tag or push.
 
 ---
 
-# Regra principal
+# Core principle
 
-A implementação V4 atualmente funcional é a fonte de verdade.
+v1.0.0 proved that the backup engine works.
 
-Primeiro entenda.
+v1.1.0 should make it pleasant to use.
 
-Depois generalize.
-
-Depois facilite a instalação.
-
-Depois documente.
-
-Não transforme um script funcional em uma arquitetura desnecessariamente complexa.
+Do not trade proven backup reliability for visual improvements.
